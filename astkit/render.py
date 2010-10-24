@@ -4,8 +4,6 @@ import inspect
 import logging
 import sys
 
-from canopy.util import node_repr
-
 log = logging.getLogger(__name__)
 
 class LocationAdjustingVisitor(ast.NodeTransformer):
