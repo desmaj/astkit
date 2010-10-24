@@ -1,0 +1,7 @@
+\.pyc$
+~$
+^lib
+^include
+^bin
+^.coverage$
+\.egg-info$
