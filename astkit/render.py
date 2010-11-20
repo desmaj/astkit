@@ -141,7 +141,7 @@ class SourceCodeRenderer(ast.NodeVisitor):
         for arg, default in reversed(args_with_defaults):
             arg_part = self._render(arg)
             if default:
-                arg_part += "=" + self._render(default)
+                arg_part += ", " + self._render(default)
             args.append(arg_part)
         if args:
             arg_parts.append(self._render(args))
@@ -217,8 +217,10 @@ class SourceCodeRenderer(ast.NodeVisitor):
         return acc + ")"
     
     def render_ClassDef(self, node):
-        source = "\n".join([self._render(dec)
+        source = "\n".join(['@' + self._render(dec)
                          for dec in node.decorator_list])
+        if source:
+            source += "\n"
         source += "class " + self._render(node.name)
         source += "(%s):\n" % ", ".join([self._render(base)
                                       for base in node.bases])
@@ -238,10 +240,10 @@ class SourceCodeRenderer(ast.NodeVisitor):
                             rendered_ops_and_comparators)
     
     def render_comprehension(self, node):
-        source = "for %s in %s" % (self._render(node.target),
+        source = "  for %s in %s" % (self._render(node.target),
                                 self._render(node.iter))
         for if_ in node.ifs:
-            source += "\n" + "if " + self._render(if_)
+            source += "\n" + "  if " + self._render(if_)
         return source
     
     def render_Continue(self, node):
@@ -263,7 +265,7 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_Eq(self, node):
         return "=="
     
-    def render_ExceptHandler(self, node):
+    def render_excepthandler(self, node):
         parts = [node.type, node.name]
         source = "except"
         if parts:
@@ -278,7 +280,7 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_Exec(self, node):
         source = 'exec %s' % self._render(node.body)
         if node.globals or node.locals:
-            source + " in "
+            source += " in "
             if node.globals:
                 source += self._render(node.globals)
                 if node.locals:
@@ -297,6 +299,7 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_For(self, node):
         source = ("for %s in %s:\n" % (self._render(node.target),
                                        self._render(node.iter)))
+        self.emit(source)
         self.start_block()
         self._render_statements(node.body)
         self.end_block()
@@ -307,7 +310,11 @@ class SourceCodeRenderer(ast.NodeVisitor):
             self.end_block()
     
     def render_FunctionDef(self, node):
-        source = "def %s(" % node.name
+        source = "\n".join(['@' + self._render(dec)
+                         for dec in node.decorator_list])
+        if source:
+            source += "\n"
+        source += "def %s(" % node.name
         source += self._render(node.args)
         if source.endswith(", "):
             source = source[:-3]
@@ -318,12 +325,12 @@ class SourceCodeRenderer(ast.NodeVisitor):
         self._render_statements(node.body)
         self.end_block()
     
-    def render_GeneratorComp(self, node):
+    def render_GeneratorExp(self, node):
         source = "( " + self._render(node.elt) + "\n"
         source += "\n".join(self._render(generator)
-                            for generator in node.generator)
+                            for generator in node.generators)
         return source + " )"
-        
+    
     def render_Global(self, node):
         self.emit("global %s\n" % self._render(node.names))
     
