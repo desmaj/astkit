@@ -353,18 +353,18 @@ class SourceCodeRenderer(ast.NodeVisitor):
             self.end_block()
         
     def render_IfExp(self, node):
-        source = "(%s if %s" % (self._render(node.body),
+        source = "( %s if %s" % (self._render(node.body),
                             self._render(node.test))
         if node.orelse:
-            source += " " + self._render(node.orelse)
-        return source + ")"
+            source += " else " + self._render(node.orelse)
+        return source + " )"
     
     def render_Import(self, node):
         self.emit("import %s\n" % self._render(node.names))
     
     def render_ImportFrom(self, node):
         import_tmpl = "from %s import %s"
-        import_stmt = import_tmpl % (node.module,
+        import_stmt = import_tmpl % (self._render(node.module),
                                      ", ".join([self._render(name)
                                                 for name
                                                 in node.names]))
@@ -452,8 +452,8 @@ class SourceCodeRenderer(ast.NodeVisitor):
         if node.dest:
             source += ">>" + self._render(node.dest) + ", "
         source += ', '.join(self._render(value) for value in node.values)
-        if node.nl and (source[-1] != '\n'):
-            source += '\n'
+        if not node.nl:
+            source += ','
         self.emit(source)
     
     def render_Raise(self, node):
@@ -464,7 +464,7 @@ class SourceCodeRenderer(ast.NodeVisitor):
             if arg:
                 args.append(arg)
         if args:
-            source += " " + ",".join([self._render(arg) for arg in args])
+            source += " " + ", ".join([self._render(arg) for arg in args])
         self.emit(source)
     
     def render_Repr(self, node):
@@ -480,7 +480,7 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_Slice(self, node):
         parts = [node.lower, node.upper, node.step]
         if parts:
-            slice_ = ":".join([self._render(part) for part in parts
+            slice_ = ", ".join([self._render(part) for part in parts
                                if part])
             return "slice(" + slice_ + ")"
         else:
@@ -526,10 +526,10 @@ class SourceCodeRenderer(ast.NodeVisitor):
     
     def render_Tuple(self, node):
         return "(%s)" % \
-            "".join([(self._render(elt) + ", ") for elt in node.elts])
+            ("".join([(self._render(elt) + ", ") for elt in node.elts]))
     
     def render_UnaryOp(self, node):
-        return self._render(node.op) + " " + self._render(node.operand)
+        return self._render(node.op) + self._render(node.operand)
     
     def render_USub(self, node):
         return "-"

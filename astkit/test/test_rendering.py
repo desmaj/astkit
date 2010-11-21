@@ -169,15 +169,43 @@ class TestStatementRendering(NodeRenderingTestCase):
                "    result = 'No class'\n"
                "    return result\n")),
               
-              (ast.FunctionDef(decorator_list=[ast.Name(id="decorated")],
-                               name="SchoolInSummertime",
-                               args=standard_arguments,
-                               body=a_body),
-               ("@decorated\n"
-                "def SchoolInSummertime(a, b, c='c', *stars, **kws):\n"
-                "    result = 'No class'\n"
-                "    return result\n")),
+             (ast.FunctionDef(decorator_list=[ast.Name(id="decorated")],
+                              name="SchoolInSummertime",
+                              args=standard_arguments,
+                              body=a_body),
+              ("@decorated\n"
+               "def SchoolInSummertime(a, b, c='c', *stars, **kws):\n"
+               "    result = 'No class'\n"
+               "    return result\n")),
              
+             (ast.Global(names=[ast.Name(id="Rand"), ast.Name(id="Todd")]),
+              "global Rand, Todd\n"),
+             
+             # I'm taking credit for testing If in the cases above.
+             # What can I say, I'm lazy.
+
+             (ast.Import(names=[ast.Name(id="John"), ast.Name(id="Paul")]),
+              "import John, Paul\n"),
+
+             (ast.ImportFrom(module=ast.Name(id="thebeatles"),
+                             names=[ast.Name(id="George"), ast.Name(id="Ringo")]),
+              "from thebeatles import George, Ringo\n"),
+
+             (ast.Pass(), 'pass\n'),
+
+             (ast.Print(dest=ast.Name(id='stdout'),
+                        values=[ast.Str(s='frog'),
+                                ast.Str('toad'),
+                                ast.Name(id='friends')],
+                        nl=False),
+              "print >>stdout, 'frog', 'toad', friends,\n"),
+             
+             (ast.Raise(type='Exception', inst='exc', tback='tb'),
+              'raise Exception, exc, tb\n'),
+
+             (ast.Return(value=ast.Num(n=42)),
+              'return 42\n'),
+
              
              ]
     
@@ -242,6 +270,92 @@ class TestExpressionRendering(NodeRenderingTestCase):
                "  for yolk in egg.yolks\n"
                "  if (yolk == 'yellow') )")),
              
+             (ast.Gt(), ">"),
+
+             (ast.GtE(), ">="),
+
+             (ast.IfExp(test=ast.Compare(left=ast.Name(id="lastname"),
+                                         ops=[ast.Eq()],
+                                         comparators=[ast.Str(s="McQueen")]),
+                        body=ast.Str(s="Steve"),
+                        orelse=ast.Str(s="Stew")),
+              "( 'Steve' if (lastname == 'McQueen') else 'Stew' )"),
+
+             (ast.In(), "in"),
+
+             (ast.NotIn(), "not in"),
+
+             (ast.Index(value=ast.BinOp(left=ast.Num(n=4),
+                                        op=ast.Add(),
+                                        right=ast.Num(n=5))),
+              "(4 + 5)"),
+
+             (ast.Is(), "is"),
+
+             (ast.IsNot(), "is not"),
+
+             (ast.keyword(arg="kwarg", value=ast.Str(s="I'm a kwarg!")),
+              'kwarg="I\'m a kwarg!"'),
+
+             (ast.Lambda(args=["x"], body=ast.BinOp(left=ast.Name(id="x"),
+                                                    op=ast.Pow(),
+                                                    right=ast.Num(n=2))),
+              "lambda x: (x ** 2)"),
+
+             (ast.List(elts=[ast.Name(id="a"), ast.Str(s="b"), ast.Num(n=4)]),
+              "[a, 'b', 4]"),
+             
+             (ast.ListComp(elt=ast.Name(id="frog"),
+                           generators=standard_comprehensions),
+              ("[ frog\n"
+               "  for egg in dozen\n"
+               "  if (egg != 'rotten')\n"
+               "  for yolk in egg.yolks\n"
+               "  if (yolk == 'yellow') ]")),
+
+             (ast.Lt(), '<'),
+
+             (ast.LtE(), '<='),
+
+             (ast.Mod(), '%'),
+
+             (ast.Mult(), '*'),
+
+             (ast.Name(id="froggie"), 'froggie'),
+
+             (ast.Not(), 'not'),
+
+             (ast.NotEq(), '!='),
+
+             (ast.Num(n=17), '17'),
+             
+             (ast.Or(), 'or'),
+
+             (ast.Pow(), '**'),
+             
+             (ast.Repr(value=ast.Name(id="frogs")),
+              'repr(frogs)'),
+
+             (ast.Slice(lower=ast.Num(n=1),
+                        upper=ast.Num(n=4),
+                        step=ast.Num(n=6)),
+              'slice(1, 4, 6)'),
+
+             (ast.Str(s='froggie'), "'froggie'"),
+
+             (ast.Sub(), '-'),
+
+             (ast.Subscript(value='eggs', slice=ast.Num(n=12)),
+              'eggs[12]'),
+             
+             (ast.Tuple(elts=[ast.Name(id="a"), ast.Str(s="b"), ast.Num(n=4)]),
+              "(a, 'b', 4, )"),
+
+             (ast.UnaryOp(op=ast.USub(), operand=ast.Num(n=42)),
+              "-42"),
+
+             (ast.USub(), '-'),
+
              
              ]
     
