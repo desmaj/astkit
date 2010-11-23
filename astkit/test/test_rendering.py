@@ -79,6 +79,14 @@ a_body = [ast.Assign(targets=[ast.Name(id="result")],
                      value=ast.Str(s="No class")),
           ast.Return(value=ast.Name(id="result"))]
 
+a_handler = ast.excepthandler(type='ClassException',
+                              name='zero_class',
+                              body=[ast.Return(value=ast.Name(id='zero_class'))])
+
+an_else = [ast.Assign(targets=[ast.Name(id="result")],
+                     value=ast.Str(s="a little class")),
+           ast.Return(value=ast.Name(id="result"))]
+
 standard_arguments = ast.arguments(args=[ast.Name(id="a"),
                                          ast.Name(id="b")],
                                    vararg="stars",
@@ -125,7 +133,7 @@ class TestStatementRendering(NodeRenderingTestCase):
              (ast.ClassDef(decorator_list=[ast.Name(id="decorated")],
                            name="SchoolInSummertime",
                            bases=["Ecole", "School"],
-                           body=a_body),
+                           body=[ast.Str(s=""" This is the docstring """)] + a_body),
               ("@decorated\n"
                "class SchoolInSummertime(Ecole, School):\n"
                "    result = 'No class'\n"
@@ -149,6 +157,10 @@ class TestStatementRendering(NodeRenderingTestCase):
                        locals=ast.Name(id="l_dict")),
               "exec the_body in g_dict, l_dict\n"),
 
+             (ast.Exec(body=ast.Name(id="the_body"),
+                       locals=ast.Name(id="l_dict")),
+              "exec the_body in l_dict\n"),
+
              (ast.Expr(value=ast.Call(func="a_funny_call",
                                       args=[],
                                       keywords=[])),
@@ -166,6 +178,18 @@ class TestStatementRendering(NodeRenderingTestCase):
                       body=a_body,
                       orelse=[]),
               ("for i in range(5):\n"
+               "    result = 'No class'\n"
+               "    return result\n")),
+              
+             (ast.For(target=ast.Name(id="i"),
+                      iter=ast.Call(func=ast.Name(id="range"),
+                                    args=[ast.Num(n=5)],
+                                    keywords=[]),
+                      body=[ast.Pass()],
+                      orelse=a_body),
+              ("for i in range(5):\n"
+               "    pass\n"
+               "else:\n"
                "    result = 'No class'\n"
                "    return result\n")),
               
@@ -205,6 +229,50 @@ class TestStatementRendering(NodeRenderingTestCase):
 
              (ast.Return(value=ast.Num(n=42)),
               'return 42\n'),
+
+             (ast.TryExcept(body=a_body,
+                            handlers=[a_handler],
+                            orelse=an_else),
+              ("try:\n"
+               "    result = 'No class'\n"
+               "    return result\n"
+               "except ClassException, zero_class:\n"
+               "    return zero_class\n"
+               "else:\n"
+               "    result = 'a little class'\n"
+               "    return result\n")),
+
+             (ast.TryFinally(body=a_body,
+                            finalbody=an_else),
+              ("try:\n"
+               "    result = 'No class'\n"
+               "    return result\n"
+               "finally:\n"
+               "    result = 'a little class'\n"
+               "    return result\n")),
+
+              (ast.While(test=ast.Compare(left=ast.Name(id="season"),
+                                          ops=[ast.Eq()],
+                                          comparators=[ast.Str(s="Summer")]),
+                         body=a_body,
+                         orelse=an_else),
+               ("while (season == 'Summer'):\n"
+                "    result = 'No class'\n"
+                "    return result\n"
+                "else:\n"
+                "    result = 'a little class'\n"
+                "    return result\n")),
+
+             (ast.With(context_expr=ast.Call(func=ast.Name(id="NewSeason"),
+                                             args=[], keywords=[]),
+                       optional_vars=[ast.Name(id="season")],
+                       body=a_body),
+              ("with NewSeason() as season:\n"
+                "    result = 'No class'\n"
+                "    return result\n")),
+             
+             (ast.Yield(value=ast.Name(id="to_oncoming_traffic")),
+              "yield to_oncoming_traffic\n"),
 
              
              ]
@@ -339,7 +407,10 @@ class TestExpressionRendering(NodeRenderingTestCase):
              (ast.Slice(lower=ast.Num(n=1),
                         upper=ast.Num(n=4),
                         step=ast.Num(n=6)),
-              'slice(1, 4, 6)'),
+              '1:4:6'),
+
+             (ast.Slice(),
+              ':'),
 
              (ast.Str(s='froggie'), "'froggie'"),
 

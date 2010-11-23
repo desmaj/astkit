@@ -25,37 +25,6 @@ def adjust_node_location(node, lineno=0, col_offset=0):
     adjuster = LocationAdjustingVisitor(lineno, col_offset)
     return adjuster.visit(node)
 
-class AccumulatingVisitor(object):
-    
-    acc = None
-    
-    def do(self, base_node):
-        self.generic_visit(base_node)
-        return self.acc
-    
-    def accumulate(self, node):
-        raise NotImplementedError()
-    
-    def visit(self, node):
-        """Visit a node."""
-        if isinstance(node, InstrumentedNode):
-            method = 'visit_' + node.node.__class__.__name__
-        else:
-            method = 'visit_' + node.__class__.__name__
-        visitor = getattr(self, method, self.generic_visit)
-        visitor(node)
-
-    def generic_visit(self, node):
-        self.accumulate(node)
-        for field, value in ast.iter_fields(node):
-            value = getattr(node, field, None)
-            if isinstance(value, list):
-                for item in value:
-                    if isinstance(item, ast.AST):
-                        self.visit(item)
-            elif isinstance(value, ast.AST):
-                self.visit(value)
-    
 INDENTATION = " " * 4
 
 class BlankLine():
@@ -279,11 +248,12 @@ class SourceCodeRenderer(ast.NodeVisitor):
     
     def render_Exec(self, node):
         source = 'exec %s' % self._render(node.body)
-        if node.globals or node.locals:
+        if (hasattr(node, 'globals') and node.globals) \
+               or (hasattr(node, 'locals') and node.locals):
             source += " in "
-            if node.globals:
+            if hasattr(node, 'globals') and node.globals:
                 source += self._render(node.globals)
-                if node.locals:
+                if hasattr(node, 'locals') and node.locals:
                     source += ", " + self._render(node.locals)
             else:
                 if node.locals:
@@ -478,11 +448,10 @@ class SourceCodeRenderer(ast.NodeVisitor):
         self.emit(source)
     
     def render_Slice(self, node):
-        parts = [node.lower, node.upper, node.step]
+        parts = [getattr(node, part) for part in ['lower', 'upper', 'step']
+                 if hasattr(node, part)]
         if parts:
-            slice_ = ", ".join([self._render(part) for part in parts
-                               if part])
-            return "slice(" + slice_ + ")"
+            return ":".join(self._render(part) for part in parts)
         else:
             return ":"
     
@@ -546,9 +515,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
             self.end_block()
     
     def render_With(self, node):
-        source = "with %s:\n" % (self._render(node.context_expr))
+        source = "with %s" % (self._render(node.context_expr))
         if node.optional_vars:
-            source += self._render(optional_vars)
+            source += ' as ' + self._render(node.optional_vars)
         source += ":\n"
         self.emit(source)
         self.start_block()
@@ -556,4 +525,4 @@ class SourceCodeRenderer(ast.NodeVisitor):
         self.end_block()
     
     def render_Yield(self, node):
-        return "yield %s" % self._render(node.value)
+        self.emit("yield %s" % self._render(node.value))
