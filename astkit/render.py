@@ -110,7 +110,7 @@ class SourceCodeRenderer(ast.NodeVisitor):
         for arg, default in reversed(args_with_defaults):
             arg_part = self._render(arg)
             if default:
-                arg_part += ", " + self._render(default)
+                arg_part += "=" + self._render(default)
             args.append(arg_part)
         if args:
             arg_parts.append(self._render(args))
@@ -245,6 +245,7 @@ class SourceCodeRenderer(ast.NodeVisitor):
         self.start_block()
         self._render_statements(node.body)
         self.end_block()
+    render_ExceptHandler = render_excepthandler
     
     def render_Exec(self, node):
         source = 'exec %s' % self._render(node.body)
@@ -343,8 +344,8 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_In(self, node):
         return "in"
     
-    def render_NotIn(self, node):
-        return "not in"
+    def render_Invert(self, node):
+        return "~"
     
     def render_Index(self, node):
         return self._render(node.value)
@@ -379,6 +380,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
                              for generator in node.generators])
         return source + " ]"
     
+    def render_LShift(self, node):
+        return "<<"
+    
     def render_Lt(self, node):
         return "<"
     
@@ -404,6 +408,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
     
     def render_NotEq(self, node):
         return "!="
+    
+    def render_NotIn(self, node):
+        return "not in"
     
     def render_Num(self, node):
         return str(node.n)
@@ -447,13 +454,17 @@ class SourceCodeRenderer(ast.NodeVisitor):
         source += "\n"
         self.emit(source)
     
+    def render_RShift(self, node):
+        return ">>"
+    
     def render_Slice(self, node):
         parts = [getattr(node, part) for part in ['lower', 'upper', 'step']
                  if hasattr(node, part)]
-        if parts:
-            return ":".join(self._render(part) for part in parts)
-        else:
-            return ":"
+        lower_str, upper_str, step_str = [self._render(part) if part else '' for part in parts]
+        slice_str = "%s:%s" % (lower_str, upper_str)
+        if step_str:
+            slice_str += (":%s" % step_str)
+        return slice_str
     
     def render_Str(self, node):
         return repr(node.s)
@@ -498,7 +509,7 @@ class SourceCodeRenderer(ast.NodeVisitor):
             ("".join([(self._render(elt) + ", ") for elt in node.elts]))
     
     def render_UnaryOp(self, node):
-        return self._render(node.op) + self._render(node.operand)
+        return self._render(node.op) + " " + self._render(node.operand)
     
     def render_USub(self, node):
         return "-"
@@ -525,4 +536,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
         self.end_block()
     
     def render_Yield(self, node):
-        self.emit("yield %s" % self._render(node.value))
+        source = "yield %s" % self._render(node.value)
+        if isinstance(node, ast.stmt):
+            self.emit(source)
+        else:
+            return source
+            
