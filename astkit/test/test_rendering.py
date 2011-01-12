@@ -4,7 +4,7 @@ import astkit.render
 
 
 render_stmt = astkit.render.SourceCodeRenderer.render
-render_expr = astkit.render.SourceCodeRenderer()._render
+render_expr = astkit.render.SourceCodeRenderer.render
 
 class RoundtripTestCase(object):
     
@@ -39,6 +39,10 @@ else:
         print 'four'
     else:
         print '17'
+""",
+                  """
+def func(a, b, c='c', *stargs, **kwargs):
+    pass
 """,
                   ]
 
@@ -88,11 +92,15 @@ an_else = [ast.Assign(targets=[ast.Name(id="result")],
            ast.Return(value=ast.Name(id="result"))]
 
 standard_arguments = ast.arguments(args=[ast.Name(id="a"),
-                                         ast.Name(id="b")],
+                                         ast.Name(id="b"),
+                                         ast.Name(id="c"),
+                                         ast.Name(id="d"),
+                                         ],
                                    vararg="stars",
                                    kwarg="kws",
-                                   defaults=[ast.keyword(arg="c",
-                                                value=ast.Str(s="c"))])
+                                   defaults=[ast.Str(s="c"),
+                                             ast.Str(s="d"),
+                                             ])
 
 standard_comprehensions = \
     [ast.comprehension(target=ast.Name(id="egg"),
@@ -198,7 +206,7 @@ class TestStatementRendering(NodeRenderingTestCase):
                               args=standard_arguments,
                               body=a_body),
               ("@decorated\n"
-               "def SchoolInSummertime(a, b, c='c', *stars, **kws):\n"
+               "def SchoolInSummertime(a, b, c='c', d='d', *stars, **kws):\n"
                "    result = 'No class'\n"
                "    return result\n")),
              
@@ -270,10 +278,6 @@ class TestStatementRendering(NodeRenderingTestCase):
               ("with NewSeason() as season:\n"
                 "    result = 'No class'\n"
                 "    return result\n")),
-             
-             (ast.Yield(value=ast.Name(id="to_oncoming_traffic")),
-              "yield to_oncoming_traffic\n"),
-
              
              ]
     
@@ -409,7 +413,9 @@ class TestExpressionRendering(NodeRenderingTestCase):
                         step=ast.Num(n=6)),
               '1:4:6'),
 
-             (ast.Slice(),
+             (ast.Slice(lower=None,
+                        upper=None,
+                        step=None),
               ':'),
 
              (ast.Str(s='froggie'), "'froggie'"),
@@ -423,10 +429,30 @@ class TestExpressionRendering(NodeRenderingTestCase):
               "(a, 'b', 4, )"),
 
              (ast.UnaryOp(op=ast.USub(), operand=ast.Num(n=42)),
-              "-42"),
+              "- 42"),
 
              (ast.USub(), '-'),
 
              
+             (ast.Yield(value=ast.Name(id="to_oncoming_traffic")),
+              "yield to_oncoming_traffic"),
+
+             
              ]
     
+class TestStatementRenderingWithNonDefaultIndentation(NodeRenderingTestCase):
+    
+    def render_and_verify(self, node, expected):
+        actual = self.render(node, 2)
+        assert expected == actual, (expected, actual)
+        
+    render = render_stmt
+    nodes = [(ast.ClassDef(decorator_list=[ast.Name(id="decorated")],
+                           name="SchoolInSummertime",
+                           bases=["Ecole", "School"],
+                           body=[ast.Str(s=""" This is the docstring """)] + a_body),
+              ("@decorated\n"
+               "class SchoolInSummertime(Ecole, School):\n"
+               "  result = 'No class'\n"
+               "  return result\n")),
+             ]

@@ -25,7 +25,7 @@ def adjust_node_location(node, lineno=0, col_offset=0):
     adjuster = LocationAdjustingVisitor(lineno, col_offset)
     return adjuster.visit(node)
 
-INDENTATION = " " * 4
+DEFAULT_INDENTATION = 4
 
 class BlankLine():
     pass
@@ -33,18 +33,26 @@ class BlankLine():
 class SourceCodeRenderer(ast.NodeVisitor):
     
     @classmethod
-    def render(cls, node):        
-        renderer = cls()
-        renderer.visit(node)
-        return ''.join(renderer._sourcelines)
+    def render(cls, node, indentation=DEFAULT_INDENTATION):
+        renderer = cls(indentation)
+        if isinstance(node, ast.stmt) or \
+                isinstance(node, ast.excepthandler) or \
+                isinstance(node, ast.Module) or \
+                isinstance(node, ast.Expression) or \
+                isinstance(node, ast.Suite):
+            renderer.visit(node)
+            return ''.join(renderer._sourcelines)
+        else:
+            return renderer._render(node)
     
     def _render(self, node):
         render_method = getattr(self, 'render_%s' % node.__class__.__name__)
         return render_method(node)
         
-    def __init__(self):
+    def __init__(self, indentation=DEFAULT_INDENTATION):
         self._sourcelines = []
         self._blocklevel = 0
+        self._indentation = indentation
     
     def emit(self, source):
         for sourceline in source.splitlines(False):
@@ -59,7 +67,7 @@ class SourceCodeRenderer(ast.NodeVisitor):
 
     @property
     def _indent(self):
-        return INDENTATION * self._blocklevel
+        return " " * self._indentation * self._blocklevel
     
     def visit(self, node):
         self._render(node)
@@ -99,21 +107,15 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_arguments(self, node):
         sep = ", "
         arg_parts = []
-        args_with_defaults = []
-        for i, arg in enumerate(reversed(node.args)):
-            if i < len(node.defaults):
-                args_with_defaults.append(\
-                    (arg, node.defaults[len(node.defaults)-i-1]))
-            else:
-                args_with_defaults.append((arg, None))
-        args = []
-        for arg, default in reversed(args_with_defaults):
-            arg_part = self._render(arg)
-            if default:
-                arg_part += "=" + self._render(default)
-            args.append(arg_part)
-        if args:
-            arg_parts.append(self._render(args))
+        arg_count = len(node.args) - len(node.defaults)
+        for i in range(arg_count):
+            arg_parts.append(self._render(node.args[i]))
+        for i in range(arg_count, len(node.args)):
+            arg_part = \
+                self._render(node.args[i]) + \
+                "=" + \
+                self._render(node.defaults[i-arg_count])
+            arg_parts.append(arg_part)
         if node.vararg:
             arg_parts.append("*%s" % node.vararg)
         if node.kwarg:
