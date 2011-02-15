@@ -428,10 +428,10 @@ class SourceCodeRenderer(ast.NodeVisitor):
     
     def render_Print(self, node):
         source = "print "
-        if node.dest:
+        if hasattr(node, 'dest') and node.dest:
             source += ">>" + self._render(node.dest) + ", "
         source += ', '.join(self._render(value) for value in node.values)
-        if not node.nl:
+        if not (hasattr(node, 'nl') and node.nl):
             source += ','
         self.emit(source)
     
