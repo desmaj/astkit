@@ -61,7 +61,6 @@ class SourceCodeRenderer(ast.NodeVisitor):
         """ Render the node's docstring, if present """
         docstring = ast.get_docstring(node)
         if docstring:
-            node.body.pop(0)
             self.emit('""" ' + docstring + '\n"""')
             return True
     
