@@ -6,25 +6,6 @@ import sys
 
 log = logging.getLogger(__name__)
 
-class LocationAdjustingVisitor(ast.NodeTransformer):
-    
-    def __init__(self, lineno=0, col_offset=0):
-        super(LocationAdjustingVisitor, self).__init__()
-        self.lineno = lineno
-        self.col_offset = 0
-    
-    def visit(node):
-        if hasattr(node, 'lineno'):
-            node.lineno += self.lineno
-        if hasattr(node, 'col_offset'):
-            node.col_offset += self.col_offset
-        self.generic_visitor(node)
-        return node
-
-def adjust_node_location(node, lineno=0, col_offset=0):
-    adjuster = LocationAdjustingVisitor(lineno, col_offset)
-    return adjuster.visit(node)
-
 DEFAULT_INDENTATION = 4
 
 class BlankLine():
@@ -82,16 +63,8 @@ class SourceCodeRenderer(ast.NodeVisitor):
         if docstring:
             node.body.pop(0)
             self.emit('""" ' + docstring + '\n"""')
+            return True
     
-    def _maybe_rearrange_imports(self, node):
-        future_imports = []
-        for index, stmt in enumerate(node.body):
-            if isinstance(stmt, ast.ImportFrom) and \
-                    stmt.module == '__future__':
-                future_imports.append(index)
-        for index in reversed(future_imports):
-            node.body.insert(0, node.body.pop(index))
-        
     def default_renderer(self, node):
         return repr(node)
     
@@ -197,8 +170,10 @@ class SourceCodeRenderer(ast.NodeVisitor):
                                       for base in node.bases])
         self.emit(source)
         self.start_block()
-        self._maybe_render_docstring(node)
-        self._render_statements(node.body)
+        if self._maybe_render_docstring(node):
+            self._render_statements(node.body[1:])
+        else:
+            self._render_statements(node.body)
         self.end_block()
     
     def render_Compare(self, node):
@@ -294,8 +269,10 @@ class SourceCodeRenderer(ast.NodeVisitor):
         source += "):\n"
         self.emit(source)
         self.start_block()
-        self._maybe_render_docstring(node)
-        self._render_statements(node.body)
+        if self._maybe_render_docstring(node):
+            self._render_statements(node.body[1:])
+        else:
+            self._render_statements(node.body)
         self.end_block()
     
     def render_GeneratorExp(self, node):
@@ -395,9 +372,10 @@ class SourceCodeRenderer(ast.NodeVisitor):
         return '%'
     
     def render_Module(self, node):
-        self._maybe_render_docstring(node)
-        self._maybe_rearrange_imports(node)
-        self._render_statements(node.body)
+        if self._maybe_render_docstring(node):
+            self._render_statements(node.body[1:])
+        else:
+            self._render_statements(node.body)
     
     def render_Mult(self, node):
         return "*"
