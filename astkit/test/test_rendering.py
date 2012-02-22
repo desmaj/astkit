@@ -1,4 +1,5 @@
 import ast
+import sys
 
 import astkit.render
 
@@ -23,22 +24,22 @@ class TestRendering(RoundtripTestCase):
     
     roundtrips = ["""
 if (length == 5):
-    print 'five'
+    printf('five')
 """,
                   """
 if (length == 5):
-    print 'five'
+    printf('five')
 else:
-    print '17'
+    printf('17')
 """,
                   """
 if (length == 5):
-    print 'five'
+    printf('five')
 else:
     if (length == 4):
-        print 'four'
+        printf('four')
     else:
-        print '17'
+        printf('17')
 """,
                   """
 def func(a, b, c='c', *stargs, **kwargs):
@@ -49,20 +50,20 @@ def func(a, b, c='c', *stargs, **kwargs):
     def test_elif(self):
         initial = """
 if (length == 5):
-    print 'five'
+    printf('five')
 elif (length == 4):
-    print 'four'
+    printf('four')
 else:
-    print '17'
+    printf('17')
 """.lstrip()
         expected = """
 if (length == 5):
-    print 'five'
+    printf('five')
 else:
     if (length == 4):
-        print 'four'
+        printf('four')
     else:
-        print '17'
+        printf('17')
 """.lstrip()
         actual = render_stmt(ast.parse(initial))
         assert expected == actual, \
@@ -117,6 +118,29 @@ standard_comprehensions = \
                        ),
      ]
 
+
+if sys.version_info[0] < 3:
+    class TestPython2StatementRendering(NodeRenderingTestCase):
+        render = render_stmt
+        nodes = [
+            (ast.Exec(body=ast.Name(id="the_body"),
+                      globals=ast.Name(id="g_dict"),
+                      locals=ast.Name(id="l_dict")),
+             "exec the_body in g_dict, l_dict\n"),
+            
+            (ast.Exec(body=ast.Name(id="the_body"),
+                      locals=ast.Name(id="l_dict")),
+             "exec the_body in l_dict\n"),
+            
+             (ast.Print(dest=ast.Name(id='stdout'),
+                        values=[ast.Str(s='frog'),
+                                ast.Str('toad'),
+                                ast.Name(id='friends')],
+                        nl=False),
+              "print >>stdout, 'frog', 'toad', friends,\n"),
+             
+            ]
+
 class TestStatementRendering(NodeRenderingTestCase):
     render = render_stmt
     nodes = [(ast.Assert(test=ast.BinOp(left=ast.Num(n=5),
@@ -159,15 +183,6 @@ class TestStatementRendering(NodeRenderingTestCase):
               ("except Exception, exc:\n"
                "    result = 'No class'\n"
                "    return result\n")),
-
-             (ast.Exec(body=ast.Name(id="the_body"),
-                       globals=ast.Name(id="g_dict"),
-                       locals=ast.Name(id="l_dict")),
-              "exec the_body in g_dict, l_dict\n"),
-
-             (ast.Exec(body=ast.Name(id="the_body"),
-                       locals=ast.Name(id="l_dict")),
-              "exec the_body in l_dict\n"),
 
              (ast.Expr(value=ast.Call(func="a_funny_call",
                                       args=[],
@@ -225,13 +240,6 @@ class TestStatementRendering(NodeRenderingTestCase):
 
              (ast.Pass(), 'pass\n'),
 
-             (ast.Print(dest=ast.Name(id='stdout'),
-                        values=[ast.Str(s='frog'),
-                                ast.Str('toad'),
-                                ast.Name(id='friends')],
-                        nl=False),
-              "print >>stdout, 'frog', 'toad', friends,\n"),
-             
              (ast.Raise(type='Exception', inst='exc', tback='tb'),
               'raise Exception, exc, tb\n'),
 
@@ -280,7 +288,16 @@ class TestStatementRendering(NodeRenderingTestCase):
                 "    return result\n")),
              
              ]
-    
+
+if sys.version_info[0] < 3:
+    class TestPython2ExpressionRendering(NodeRenderingTestCase):
+        render = render_expr
+        nodes = [
+            (ast.Repr(value=ast.Name(id="frogs")),
+             'repr(frogs)'),
+            
+            ]
+
 class TestExpressionRendering(NodeRenderingTestCase):
     render = render_expr
     nodes = [(ast.Add(),
@@ -405,9 +422,6 @@ class TestExpressionRendering(NodeRenderingTestCase):
 
              (ast.Pow(), '**'),
              
-             (ast.Repr(value=ast.Name(id="frogs")),
-              'repr(frogs)'),
-
              (ast.Slice(lower=ast.Num(n=1),
                         upper=ast.Num(n=4),
                         step=ast.Num(n=6)),

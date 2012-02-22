@@ -76,6 +76,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_BitAnd(self, node):
         return "&"
     
+    def render_arg(self, node):
+        return node.arg
+    
     def render_arguments(self, node):
         sep = ", "
         arg_parts = []
