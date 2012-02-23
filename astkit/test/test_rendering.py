@@ -1,6 +1,6 @@
-import ast
 import sys
 
+from astkit.compat import ast
 import astkit.render
 
 
@@ -141,6 +141,33 @@ if sys.version_info[0] < 3:
              
             ]
 
+if sys.version_info[:2] < (2, 6):
+    class TestfunctionDefRendering(NodeRenderingTestCase):
+        render = render_stmt
+        
+        nodes = [(ast.FunctionDef(decorators=[ast.Name(id="decorated")],
+                                  name="SchoolInSummertime",
+                                  args=standard_arguments,
+                                  body=a_body),
+                  ("@decorated\n"
+                   "def SchoolInSummertime(a, b, c='c', d='d', *stars, **kws):\n"
+                   "    result = 'No class'\n"
+                   "    return result\n")),
+                 ]
+else:             
+    class TestfunctionDefRendering(NodeRenderingTestCase):
+        render = render_stmt
+        
+        nodes = [(ast.FunctionDef(decorator_list=[ast.Name(id="decorated")],
+                                  name="SchoolInSummertime",
+                                  args=standard_arguments,
+                                  body=a_body),
+                  ("@decorated\n"
+                   "def SchoolInSummertime(a, b, c='c', d='d', *stars, **kws):\n"
+                   "    result = 'No class'\n"
+                   "    return result\n")),
+                 ]
+
 class TestStatementRendering(NodeRenderingTestCase):
     render = render_stmt
     nodes = [(ast.Assert(test=ast.BinOp(left=ast.Num(n=5),
@@ -216,15 +243,6 @@ class TestStatementRendering(NodeRenderingTestCase):
                "    result = 'No class'\n"
                "    return result\n")),
               
-             (ast.FunctionDef(decorator_list=[ast.Name(id="decorated")],
-                              name="SchoolInSummertime",
-                              args=standard_arguments,
-                              body=a_body),
-              ("@decorated\n"
-               "def SchoolInSummertime(a, b, c='c', d='d', *stars, **kws):\n"
-               "    result = 'No class'\n"
-               "    return result\n")),
-             
              (ast.Global(names=[ast.Name(id="Rand"), ast.Name(id="Todd")]),
               "global Rand, Todd\n"),
              

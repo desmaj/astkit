@@ -1,8 +1,9 @@
-import ast
 import copy
 import inspect
 import logging
 import sys
+
+from astkit.compat import ast
 
 log = logging.getLogger(__name__)
 
@@ -260,8 +261,12 @@ class SourceCodeRenderer(ast.NodeVisitor):
             self.end_block()
     
     def render_FunctionDef(self, node):
+        if sys.version_info[:2] < (2, 6):
+            decorators = node.decorators
+        else:
+            decorators = node.decorator_list
         source = "\n".join(['@' + self._render(dec)
-                         for dec in node.decorator_list])
+                         for dec in decorators])
         if source:
             source += "\n"
         source += "def %s(" % node.name

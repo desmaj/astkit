@@ -6,3 +6,4 @@
 ^.coverage$
 \.egg-info$
 ^docs/_build
+^env25
