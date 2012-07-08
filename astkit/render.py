@@ -150,6 +150,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_BitOr(self, node):
         return "|"
     
+    def render_BitXor(self, node):
+        return "^"
+    
     def render_BlankLine(self, node):
         self.emit("\n")
     
@@ -263,6 +266,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
     
     def render_Expression(self, node):
         self.emit(self._render(node.body))
+    
+    def render_FloorDiv(self, node):
+        return '//'
     
     def render_For(self, node):
         source = ("for %s in %s:\n" % (self._render(node.target),

@@ -339,6 +339,9 @@ class TestExpressionRendering(NodeRenderingTestCase):
              (ast.BitOr(),
               '|'),
 
+             (ast.BitXor(),
+              '^'),
+             
              (ast.BoolOp(op=ast.And(), values=[ast.Name(id="a"),
                                                ast.Name(id="b"),
                                                ast.Name(id="c"),
@@ -369,6 +372,9 @@ class TestExpressionRendering(NodeRenderingTestCase):
              (ast.Eq(),
               '=='),
 
+             (ast.FloorDiv(),
+              '//'),
+             
              (ast.GeneratorExp(elt=ast.Name(id="frog"),
                                generators=standard_comprehensions),
               ("( frog\n"
