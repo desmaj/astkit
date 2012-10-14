@@ -17,3 +17,4 @@
 #
 #
 from astkit.compat import ast
+from astkit.processor import install_processor
