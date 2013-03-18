@@ -15,10 +15,10 @@ log = logging.getLogger(__name__)
 from astkit import ast
 from astkit.render import SourceCodeRenderer
 
-major = sys.version[0]
-if major == '2':
+major = sys.version_info.major
+if major == 2:
     from astkit.compat.py2 import exec_f
-elif major == '3':
+elif major == 3:
     from astkit.compat.py3 import exec_f
 else:
     raise RuntimeError("Couldn't find a compatible 'exec_f' for version %r",
