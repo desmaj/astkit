@@ -15,6 +15,15 @@ log = logging.getLogger(__name__)
 from astkit import ast
 from astkit.render import SourceCodeRenderer
 
+major = sys.version[0]
+if major == '2':
+    from astkit.compat.py2 import exec_f
+elif major == '3':
+    from astkit.compat.py3 import exec_f
+else:
+    raise RuntimeError("Couldn't find a compatible 'exec_f' for version %r",
+                       major)
+
 class _ModuleLoader(object):
     
     def __init__(self, fullpath):
@@ -48,7 +57,7 @@ class _ModuleLoader(object):
         mod.__loader__ = self
         if ispkg:
             mod.__path__ = [os.path.dirname(self.fullpath)]
-        exec code in mod.__dict__
+        exec_f(code, mod.__dict__)
         return mod
 
 class _NullLoader(object):

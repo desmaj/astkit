@@ -264,27 +264,6 @@ class TestStatementRendering(NodeRenderingTestCase):
              (ast.Return(value=ast.Num(n=42)),
               'return 42\n'),
 
-             (ast.TryExcept(body=a_body,
-                            handlers=[a_handler],
-                            orelse=an_else),
-              ("try:\n"
-               "    result = 'No class'\n"
-               "    return result\n"
-               "except ClassException, zero_class:\n"
-               "    return zero_class\n"
-               "else:\n"
-               "    result = 'a little class'\n"
-               "    return result\n")),
-
-             (ast.TryFinally(body=a_body,
-                            finalbody=an_else),
-              ("try:\n"
-               "    result = 'No class'\n"
-               "    return result\n"
-               "finally:\n"
-               "    result = 'a little class'\n"
-               "    return result\n")),
-
               (ast.While(test=ast.Compare(left=ast.Name(id="season"),
                                           ops=[ast.Eq()],
                                           comparators=[ast.Str(s="Summer")]),
@@ -307,6 +286,7 @@ class TestStatementRendering(NodeRenderingTestCase):
              
              ]
 
+
 if sys.version_info[0] < 3:
     class TestPython2ExpressionRendering(NodeRenderingTestCase):
         render = render_expr
@@ -314,7 +294,28 @@ if sys.version_info[0] < 3:
             (ast.Repr(value=ast.Name(id="frogs")),
              'repr(frogs)'),
             
+            (ast.TryExcept(body=a_body,
+                            handlers=[a_handler],
+                            orelse=an_else),
+              ("try:\n"
+               "    result = 'No class'\n"
+               "    return result\n"
+               "except ClassException, zero_class:\n"
+               "    return zero_class\n"
+               "else:\n"
+               "    result = 'a little class'\n"
+               "    return result\n")),
+
+             (ast.TryFinally(body=a_body,
+                            finalbody=an_else),
+              ("try:\n"
+               "    result = 'No class'\n"
+               "    return result\n"
+               "finally:\n"
+               "    result = 'a little class'\n"
+               "    return result\n")),
             ]
+
 
 class TestExpressionRendering(NodeRenderingTestCase):
     render = render_expr

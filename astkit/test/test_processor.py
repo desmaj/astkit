@@ -1,4 +1,5 @@
 import os
+import sys
 
 class DummyProcessor(object):
     pass
@@ -56,6 +57,24 @@ class TestImportHook(object):
     def test_find_module_for_module_returns_loader(self):
         from astkit.processor import _ModuleLoader
         hook = self._make_one()
+        if 'codeop' in sys.modules:
+            del sys.modules['codeop']
         loader = hook.find_module('codeop')
         assert isinstance(loader, _ModuleLoader), loader
 
+class Test_ModuleLoader(object):
+    
+    def _make_one(self, fullpath):
+        from astkit.processor import _ModuleLoader
+        return _ModuleLoader(fullpath)
+    
+    def test_load_module(self):
+        fullname = 'astkit.test.samples.simple'
+        fullpath = os.path.join(os.path.dirname(__file__), 
+                                'samples', 'simple.py')
+        loader = self._make_one(fullpath)
+        
+        assert fullname not in sys.modules
+        simple = loader.load_module(fullname)
+        assert fullname in sys.modules
+        del sys.modules[fullname]
