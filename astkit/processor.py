@@ -63,7 +63,7 @@ class _ModuleLoader(object):
 class _NullLoader(object):
     
     def load_module(self, fullname):
-        return sys,modules[fullname]
+        return sys.modules[fullname]
 
 class _ImportHook(object):
     """ An implementation of an import hook per PEP 302
@@ -95,7 +95,7 @@ class _ImportHook(object):
         
         package_path = os.path.join(directory, fullname.split('.')[-1], '__init__.py')
         if os.path.exists(package_path):
-            loader = ModuleLoader(package_path)
+            loader = _ModuleLoader(package_path)
             return loader
 
 class _ProcessorManager(object):
