@@ -147,6 +147,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
                                self._render(node.op),
                                self._render(node.right))
     
+    def render_BitAnd(self, node):
+        return "&"
+    
     def render_BitOr(self, node):
         return "|"
     
@@ -517,6 +520,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_Tuple(self, node):
         return "(%s)" % \
             ("".join([(self._render(elt) + ", ") for elt in node.elts]))
+    
+    def render_UAdd(self, node):
+        return "+"
     
     def render_UnaryOp(self, node):
         return self._render(node.op) + " " + self._render(node.operand)

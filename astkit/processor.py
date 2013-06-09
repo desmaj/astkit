@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 from astkit import ast
 from astkit.render import SourceCodeRenderer
 
-major = sys.version_info.major
+major = sys.version_info[0]
 if major == 2:
     from astkit.compat.py2 import exec_f
 elif major == 3:
