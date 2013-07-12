@@ -165,7 +165,10 @@ class SourceCodeRenderer(ast.NodeVisitor):
         op = self._render(node.op)
         return "(" + (" " + op + " ").join([self._render(value)
                                             for value in node.values]) + ")"
-
+    
+    def render_Bytes(self, node):
+        return "b'%s'" % str(node.s)
+        
     def render_Call(self, node):
         name = self._render(node.func)
         acc = "%s(" % (name)
@@ -231,22 +234,45 @@ class SourceCodeRenderer(ast.NodeVisitor):
         return "/"
     
     def render_Delete(self, node):
-        return self.emit("del " + self._render(node.targets))
+        self.emit("del " + self._render(node.targets))
+    
+    def render_DictComp(self, node):
+        acc = "{%s: %s\n" % (self._render(node.key),
+                           self._render(node.value))
+        acc += "\n".join([self._render(generator)
+                          for generator in node.generators])
+        return acc
     
     def render_Eq(self, node):
         return "=="
     
-    def render_excepthandler(self, node):
-        parts = [node.type, node.name]
-        source = "except"
-        if parts:
-            source += " "
-            source += ", ".join([self._render(part) for part in parts if part])
-        source += ":\n"
-        self.emit(source)
-        self.start_block()
-        self._render_statements(node.body)
-        self.end_block()
+    def render_Ellipsis(self, node):
+        return '...'
+    
+    if sys.version_info[:2] < (3, 0):
+        def render_excepthandler(self, node):
+            parts = [node.type, node.name]
+            source = "except"
+            if parts:
+                source += " "
+                source += ", ".join([self._render(part) for part in parts if part])
+            source += ":\n"
+            self.emit(source)
+            self.start_block()
+            self._render_statements(node.body)
+            self.end_block()
+    else:
+        def render_excepthandler(self, node):
+            parts = [node.type, node.name]
+            source = "except"
+            if parts:
+                source += " "
+                source += " as ".join([self._render(part) for part in parts if part])
+            source += ":\n"
+            self.emit(source)
+            self.start_block()
+            self._render_statements(node.body)
+            self.end_block()
     render_ExceptHandler = render_excepthandler
     
     def render_Exec(self, node):
@@ -268,6 +294,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
     
     def render_Expression(self, node):
         self.emit(self._render(node.body))
+    
+    def render_ExtSlice(self, node):
+        return "%s" % ", ".join(self._render(slice) for slice in node.dims)
     
     def render_FloorDiv(self, node):
         return '//'
@@ -415,6 +444,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_Name(self, node):
         return node.id
     
+    def render_Nonlocal(self, node):
+        self.emit("nonlocal %s\n" % self._render(node.names))
+    
     def render_Not(self, node):
         return "not"
     
@@ -469,14 +501,30 @@ class SourceCodeRenderer(ast.NodeVisitor):
     def render_RShift(self, node):
         return ">>"
     
+    def render_Set(self, node):
+        acc = "{%s}" % ", ".join(self._render(elt) for elt in node.elts)
+        return acc
+    
+    def render_SetComp(self, node):
+        source = "{ " + self._render(node.elt) + "\n"
+        source += "\n".join([self._render(generator)
+                             for generator in node.generators])
+        return source + " }"
+    
     def render_Slice(self, node):
         parts = [getattr(node, part) for part in ['lower', 'upper', 'step']
                  if hasattr(node, part)]
-        lower_str, upper_str, step_str = [self._render(part) if part else '' for part in parts]
+        if parts:
+            lower_str, upper_str, step_str = [self._render(part) if part else '' for part in parts]
+        else:
+            lower_str, upper_str, step_str = ["", "", ""]
         slice_str = "%s:%s" % (lower_str, upper_str)
         if step_str:
             slice_str += (":%s" % step_str)
         return slice_str
+    
+    def render_Starred(self, node):
+        return "*%s" % self._render(node.value)
     
     def render_Str(self, node):
         return repr(node.s)
@@ -492,6 +540,24 @@ class SourceCodeRenderer(ast.NodeVisitor):
     
     def render_Suite(self, node):
         self._render(node.body)
+    
+    def render_Try(self, node):
+        self.emit("try:\n")
+        self.start_block()
+        self._render_statements(node.body)
+        self.end_block()
+        for handler in node.handlers:
+            self._render(handler)
+        if node.orelse:
+            self.emit("else:\n")
+            self.start_block()
+            self._render_statements(node.orelse)
+            self.end_block()
+        if node.finalbody:
+            self.emit("finally:\n")
+            self.start_block()
+            self._render_statements(node.finalbody)
+            self.end_block()
     
     def render_TryExcept(self, node):
         self.emit("try:\n")
@@ -540,20 +606,48 @@ class SourceCodeRenderer(ast.NodeVisitor):
             self._render_statements(node.orelse)
             self.end_block()
     
-    def render_With(self, node):
-        source = "with %s" % (self._render(node.context_expr))
-        if node.optional_vars:
-            source += ' as ' + self._render(node.optional_vars)
-        source += ":\n"
-        self.emit(source)
-        self.start_block()
-        self._render_statements(node.body)
-        self.end_block()
-    
+    if sys.version_info[:2] < (3, 0):
+        def render_With(self, node):
+            source = "with %s" % (self._render(node.context_expr))
+            if node.optional_vars:
+                source += ' as ' + self._render(node.optional_vars)
+            source += ":\n"
+            self.emit(source)
+            self.start_block()
+            self._render_statements(node.body)
+            self.end_block()
+    else:
+        def render_With(self, node):
+            source = "with " + ", ".join(self._render(withitem)
+                                         for withitem in node.withitems)
+            source += ":\n"
+            self.emit(source)
+            self.start_block()
+            self._render_statements(node.body)
+            self.end_block()
+        
+        def render_withitem(self, node):
+            source = "%s" % (self._render(node.context_expr))
+            if node.optional_vars:
+                source += ' as ' + self._render(node.optional_vars)
+            return source
+        
     def render_Yield(self, node):
         source = "yield %s" % self._render(node.value)
         if isinstance(node, ast.stmt):
             self.emit(source)
         else:
             return source
-            
+    
+    def render_YieldFrom(self, node):
+        source = "yield from %s" % self._render(node.value)
+        return source
+    
+    def render_invisible_node(self, node):
+        return ''
+    render_Load = render_invisible_node
+    render_Store = render_invisible_node
+    render_Del = render_invisible_node
+    render_AugLoad = render_invisible_node
+    render_AugStore = render_invisible_node
+    render_Param = render_invisible_node

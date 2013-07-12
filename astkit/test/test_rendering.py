@@ -2,6 +2,21 @@ import sys
 
 from astkit.compat import ast
 import astkit.render
+from astkit.util import ASTClassTree
+
+
+class TestRenderingCoverage(object):
+    
+    def test_all_nodes_are_renderable(self):
+        class_tree = ASTClassTree.create()
+        renderable_classes = class_tree.leaves()
+        renderer = astkit.render.SourceCodeRenderer()
+        
+        def _test_renderability(node_class):
+            assert hasattr(renderer, 'render_%s' % node_class.__name__), (
+                node_class)
+        for node_class in renderable_classes:
+            yield _test_renderability, node_class
 
 
 render_stmt = astkit.render.SourceCodeRenderer.render
@@ -92,6 +107,10 @@ an_else = [ast.Assign(targets=[ast.Name(id="result")],
                      value=ast.Str(s="a little class")),
            ast.Return(value=ast.Name(id="result"))]
 
+a_final = [ast.Assign(targets=[ast.Name(id="result")],
+                      value=ast.Str(s="a lot of class")),
+           ast.Return(value=ast.Name(id="result"))]
+
 standard_arguments = ast.arguments(args=[ast.Name(id="a"),
                                          ast.Name(id="b"),
                                          ast.Name(id="c"),
@@ -132,15 +151,94 @@ if sys.version_info[0] < 3:
                       locals=ast.Name(id="l_dict")),
              "exec the_body in l_dict\n"),
             
-             (ast.Print(dest=ast.Name(id='stdout'),
-                        values=[ast.Str(s='frog'),
-                                ast.Str('toad'),
-                                ast.Name(id='friends')],
-                        nl=False),
-              "print >>stdout, 'frog', 'toad', friends,\n"),
+            (ast.Print(dest=ast.Name(id='stdout'),
+                       values=[ast.Str(s='frog'),
+                               ast.Str('toad'),
+                               ast.Name(id='friends')],
+                       nl=False),
+             "print >>stdout, 'frog', 'toad', friends,\n"),
+            
+             (ast.With(context_expr=ast.Call(func=ast.Name(id="NewSeason"),
+                                             args=[], keywords=[]),
+                       optional_vars=[ast.Name(id="season")],
+                       body=a_body),
+              ("with NewSeason() as season:\n"
+                "    result = 'No class'\n"
+                "    return result\n")),
              
-            ]
+            (ast.TryExcept(body=a_body,
+                            handlers=[a_handler],
+                            orelse=an_else),
+              ("try:\n"
+               "    result = 'No class'\n"
+               "    return result\n"
+               "except ClassException, zero_class:\n"
+               "    return zero_class\n"
+               "else:\n"
+               "    result = 'a little class'\n"
+               "    return result\n")),
 
+             (ast.TryFinally(body=a_body,
+                            finalbody=an_else),
+              ("try:\n"
+               "    result = 'No class'\n"
+               "    return result\n"
+               "finally:\n"
+               "    result = 'a little class'\n"
+               "    return result\n")),
+            
+             (ast.excepthandler(type=ast.Name(id="Exception"),
+                                name=ast.Name(id="exc"),
+                                body=a_body),
+              ("except Exception, exc:\n"
+               "    result = 'No class'\n"
+               "    return result\n")),
+
+            ]
+else:
+    class TestPython3StatementRendering(NodeRenderingTestCase):
+        render = render_stmt
+        nodes = [
+             (ast.With(withitems=[ast.withitem(context_expr=ast.Call(func=ast.Name(id="NewSeason"),
+                                                                     args=[], keywords=[]),
+                                               optional_vars=[ast.Name(id="season")]),
+                                  ast.withitem(context_expr=ast.Call(func=ast.Name(id="OldSeason"),
+                                                                     args=[], keywords=[]),
+                                               optional_vars=[ast.Name(id="oseason")]),
+                                  ],
+                       body=a_body),
+              ("with NewSeason() as season, OldSeason() as oseason:\n"
+                "    result = 'No class'\n"
+                "    return result\n")),
+             
+             (ast.Nonlocal(names=[ast.Name(id="Rand"), ast.Name(id="Todd")]),
+              "nonlocal Rand, Todd\n"),
+             
+            (ast.Try(body=a_body,
+                     handlers=[a_handler],
+                     orelse=an_else,
+                     finalbody=a_final),
+              ("try:\n"
+               "    result = 'No class'\n"
+               "    return result\n"
+               "except ClassException as zero_class:\n"
+               "    return zero_class\n"
+               "else:\n"
+               "    result = 'a little class'\n"
+               "    return result\n"
+               "finally:\n"
+               "    result = 'a lot of class'\n"
+               "    return result\n")),
+
+             (ast.excepthandler(type=ast.Name(id="Exception"),
+                                name=ast.Name(id="exc"),
+                                body=a_body),
+              ("except Exception as exc:\n"
+               "    result = 'No class'\n"
+               "    return result\n")),
+
+            ]
+    
 if sys.version_info[:2] < (2, 6):
     class TestfunctionDefRendering(NodeRenderingTestCase):
         render = render_stmt
@@ -203,13 +301,6 @@ class TestStatementRendering(NodeRenderingTestCase):
 
              (ast.Delete(targets=[ast.Name(id="tanks"), ast.Name(id="bombs")]),
               "del tanks, bombs\n"),
-
-             (ast.excepthandler(type=ast.Name(id="Exception"),
-                                name=ast.Name(id="exc"),
-                                body=a_body),
-              ("except Exception, exc:\n"
-               "    result = 'No class'\n"
-               "    return result\n")),
 
              (ast.Expr(value=ast.Call(func="a_funny_call",
                                       args=[],
@@ -276,14 +367,6 @@ class TestStatementRendering(NodeRenderingTestCase):
                 "    result = 'a little class'\n"
                 "    return result\n")),
 
-             (ast.With(context_expr=ast.Call(func=ast.Name(id="NewSeason"),
-                                             args=[], keywords=[]),
-                       optional_vars=[ast.Name(id="season")],
-                       body=a_body),
-              ("with NewSeason() as season:\n"
-                "    result = 'No class'\n"
-                "    return result\n")),
-             
              ]
 
 
@@ -294,28 +377,57 @@ if sys.version_info[0] < 3:
             (ast.Repr(value=ast.Name(id="frogs")),
              'repr(frogs)'),
             
-            (ast.TryExcept(body=a_body,
-                            handlers=[a_handler],
-                            orelse=an_else),
-              ("try:\n"
-               "    result = 'No class'\n"
-               "    return result\n"
-               "except ClassException, zero_class:\n"
-               "    return zero_class\n"
-               "else:\n"
-               "    result = 'a little class'\n"
-               "    return result\n")),
-
-             (ast.TryFinally(body=a_body,
-                            finalbody=an_else),
-              ("try:\n"
-               "    result = 'No class'\n"
-               "    return result\n"
-               "finally:\n"
-               "    result = 'a little class'\n"
-               "    return result\n")),
+            ]
+else:
+    class TestPython3ExpressionRendering(NodeRenderingTestCase):
+        render = render_expr
+        nodes = [
+            (ast.Starred(value=ast.Name(id="frogs")),
+             '*frogs'),
+            
+            (ast.YieldFrom(value=ast.Name(id="frogs")),
+             'yield from frogs'),
+            
+            (ast.withitem(context_expr=ast.Call(func=ast.Name(id="NewSeason"),
+                                                args=[], keywords=[]),
+                          optional_vars=[ast.Name(id="season")]),
+             "NewSeason() as season"),
+            
+            (ast.Bytes(s="some bytes"),
+             "b'some bytes'"),
+            
             ]
 
+if sys.version_info[:2] >= (2, 7):
+    class Test27ExpressionRendering(NodeRenderingTestCase):
+        render = render_expr
+        nodes = [
+            (ast.DictComp(key=ast.Name(id="yolk"),
+                          value=ast.Attribute(value=ast.Name(id="yolk"),
+                                              attr="radius"),
+                          generators=standard_comprehensions),
+             ("{yolk: yolk.radius\n"
+              "  for egg in dozen\n"
+              "  if (egg != 'rotten')\n"
+              "  for yolk in egg.yolks\n"
+              "  if (yolk == 'yellow')")),
+            
+             (ast.SetComp(elt=ast.Name(id="frog"),
+                          generators=standard_comprehensions),
+              ("{ frog\n"
+               "  for egg in dozen\n"
+               "  if (egg != 'rotten')\n"
+               "  for yolk in egg.yolks\n"
+               "  if (yolk == 'yellow') }")),
+
+            (ast.Set(elts=[ast.Num(n=1),
+                           ast.Num(n=2),
+                           ast.Num(n=3),
+                           ]),
+             "{1, 2, 3}"),
+             
+            ]
+        
 
 class TestExpressionRendering(NodeRenderingTestCase):
     render = render_expr
@@ -370,8 +482,17 @@ class TestExpressionRendering(NodeRenderingTestCase):
              (ast.Div(),
               "/"),
 
+             (ast.Ellipsis(),
+              '...'),
+
              (ast.Eq(),
               '=='),
+
+             (ast.ExtSlice(dims=[ast.Slice(),
+                                 ast.Index(value=ast.List(elts=[ast.Num(n=2),
+                                                                ast.Num(n=4)]))
+                                 ]),
+              ':, [2, 4]'),
 
              (ast.FloorDiv(),
               '//'),

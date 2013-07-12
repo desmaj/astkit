@@ -88,8 +88,9 @@ if __name__ == '__main__':
     # pprint.pprint(inspect.getclasstree(classes, unique=True))
     # 
     
+    import sys
     tree = ASTClassTree.create()
-    print tree
+    sys.stdout.write(str(tree) + "\n")
     for leaf in sorted(tree.leaves(), key=lambda item: item.__name__):
-        print leaf
+        sys.stdout.write(str(leaf) + "\n")
     
