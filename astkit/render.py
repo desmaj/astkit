@@ -371,15 +371,16 @@ class SourceCodeRenderer(ast.NodeVisitor):
         return source + " )"
     
     def render_Import(self, node):
-        self.emit("import %s\n" % self._render(node.names))
+        self.emit("import %s" % self._render(node.names))
     
     def render_ImportFrom(self, node):
-        import_tmpl = "from %s import %s"
-        import_stmt = import_tmpl % (self._render(node.module),
-                                     ", ".join([self._render(name)
-                                                for name
-                                                in node.names]))
-        self.emit(import_stmt)
+        acc = "from "
+        if node.level is not None:
+            acc += "." * node.level
+        if node.module:
+            acc += self._render(node.module)
+        acc += " import " + ", ".join([self._render(name) for name in node.names])
+        self.emit(acc)
     
     def render_In(self, node):
         return "in"
@@ -633,7 +634,9 @@ class SourceCodeRenderer(ast.NodeVisitor):
             return source
         
     def render_Yield(self, node):
-        source = "yield %s" % self._render(node.value)
+        source = "yield"
+        if node.value:
+            source += " " + self._render(node.value)
         if isinstance(node, ast.stmt):
             self.emit(source)
         else:

@@ -344,9 +344,15 @@ class TestStatementRendering(NodeRenderingTestCase):
               "import John, Paul\n"),
 
              (ast.ImportFrom(module=ast.Name(id="thebeatles"),
-                             names=[ast.Name(id="George"), ast.Name(id="Ringo")]),
+                             names=[ast.Name(id="George"), ast.Name(id="Ringo")],
+                             level=None),
               "from thebeatles import George, Ringo\n"),
 
+             (ast.ImportFrom(module=None,
+                             names=[ast.Name(id="George"), ast.Name(id="Ringo")],
+                             level=2),
+              "from .. import George, Ringo\n"),
+             
              (ast.Pass(), 'pass\n'),
 
              (ast.Raise(type='Exception', inst='exc', tback='tb'),
@@ -597,6 +603,8 @@ class TestExpressionRendering(NodeRenderingTestCase):
              (ast.Yield(value=ast.Name(id="to_oncoming_traffic")),
               "yield to_oncoming_traffic"),
 
+             (ast.Yield(value=None),
+              "yield"),
              
              ]
     
