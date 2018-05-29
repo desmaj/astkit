@@ -8,3 +8,4 @@
 ^docs/_build
 ^env25
 ^.tox
+^.pytest.cache
